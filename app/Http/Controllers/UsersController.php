@@ -13,7 +13,7 @@ class UsersController extends Controller
     public function __construct()
     {
         $this->middleware('auth',[
-            'except' => ['show','create','store','index']
+            'except' => ['show','create','store','index','confirmEmail']
             //通过 except 方法来设定 指定动作 不使用 Auth 中间件进行过滤，
             //意为 —— 除了此处指定的动作以外，所有其他动作都必须登录用户才能访问，
             //类似于黑名单的过滤机制。相反的还有 only 白名单方法，将只过滤指定动作。
@@ -58,10 +58,10 @@ class UsersController extends Controller
             'password' => bcrypt($request->password),
         ]);
 
-        Auth::login($user);
+        $this->sendEmailConfirmationTo($user);
 
-        session()->flash('success','欢迎老弟，你将在这里开启一段新的旅程~');
-        return redirect()->route('users.show',[$user]);
+        session()->flash('success','验证邮件已发送到你的注册邮箱上，请注意查收');
+        return redirect('/');
         //validate()接收两个参数
         //参数一是用户的输入数据
         //参数二是输入数据的验证规则
@@ -107,5 +107,32 @@ class UsersController extends Controller
         $user->delete();
         session()->flash('success','成功删除用户！');
         return back();
+    }
+
+    public function sendEmailConfirmationTo()
+    {
+        $view = 'emails.confirm';
+        $data = compact('user');
+        $from = 'aufree@yousails.com';
+        $name = 'Aufree';
+        $to = $user->email;
+        $subject = "感谢注册 Sample 应用！请确认你的邮箱。";
+
+        Mail::send($view, $data, function ($message) use ($from, $name, $to, $subject) {
+            $message->from($from, $name)->to($to)->subject($subject);
+        });
+    }
+
+    public function confirmEmail($token)
+    {
+        $user = User::where('activation_token',$token)->firstOrFail();
+
+        $user->activated = true;
+        $user->activation_token = null;
+        $user->save();
+
+        Auth:login($user);
+        session()->flash('success','老弟，账号激活成功');
+        return redirect()->route('users.show',[$user]);
     }
 }
