@@ -10,6 +10,6 @@
             @endforeach
         </ul>
 
-        {{!! $users->render() !!}}//用来渲染分页链接
+        {!! $users->render() !!}
     </div>
 @stop
